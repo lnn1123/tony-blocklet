@@ -1,48 +1,74 @@
-import { useState } from 'react';
-import reactLogo from '../assets/react.svg';
-import blockletLogo from '../assets/blocklet.svg';
-import viteLogo from '../assets/vite.svg';
+import { useEffect, useState } from 'react';
+
 import './home.css';
-import api from '../libs/api';
 
 function Home() {
-  const [count, setCount] = useState(0);
+  const [profile, setProfile] = useState({ username: '', email: '', phone: '' });
+  const [isEditing, setIsEditing] = useState(false);
+  const [form, setForm] = useState({ username: '', email: '', phone: '' });
+  const [error, setError] = useState('');
 
-  async function getApiData() {
-    const { data } = await api.get('/api/data');
-    const { message } = data;
-    alert(`Message from api: ${message}`);
-  }
+  useEffect(() => {
+    fetch('/api/profile')
+      .then((response) => response.json())
+      .then((data) => setProfile(data));
+  }, []);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm({ ...form, [name]: value });
+  };
+
+  const saveProfile = () => {
+    fetch('/api/profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          return response.json().then((data) => {
+            throw new Error(data.error);
+          });
+        }
+        return response.json();
+      })
+      .then((data) => {
+        setProfile(data);
+        setIsEditing(false);
+        setError('');
+      })
+      .catch((err) => setError(err.message));
+  };
 
   return (
-    <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank" rel="noreferrer">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank" rel="noreferrer">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-        <a href="https://www.arcblock.io/docs/blocklet-developer/getting-started" target="_blank" rel="noreferrer">
-          <img src={blockletLogo} className="logo blocklet" alt="Blocklet logo" />
-        </a>
+    <div className="App">
+      <div className="container">
+        <h1>User Profile</h1>
+        {error && <p className="error">{error}</p>}
+        {isEditing ? (
+          <div>
+            <input type="text" name="username" value={form.username} onChange={handleChange} placeholder="Username" />
+            <input type="email" name="email" value={form.email} onChange={handleChange} placeholder="Email" />
+            <input type="tel" name="phone" value={form.phone} onChange={handleChange} placeholder="Phone" />
+            <button onClick={saveProfile}>Save</button>
+          </div>
+        ) : (
+          <div>
+            <p>Username: {profile.username}</p>
+            <p>Email: {profile.email}</p>
+            <p>Phone: {profile.phone}</p>
+            <button
+              onClick={() => {
+                setForm(profile);
+                setIsEditing(true);
+              }}>
+              Edit
+            </button>
+          </div>
+        )}
       </div>
-      <h1>Vite + React + Blocklet</h1>
-      <div className="card">
-        <button type="button" onClick={() => setCount((currentCount) => currentCount + 1)}>
-          count is {count}
-        </button>
-        <br />
-        <br />
-        <button type="button" onClick={getApiData}>
-          Get API Data
-        </button>
-        <p>
-          Edit <code>src/app.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">Click on the Vite and React logos to learn more</p>
-    </>
+    </div>
   );
 }
 
